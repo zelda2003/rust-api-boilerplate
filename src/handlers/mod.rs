@@ -37,3 +37,7 @@ pub async fn get_users(db_pool: web::Data<sqlx::PgPool>) -> impl Responder {
         }
     }
 }
+
+pub async fn hello_world() -> HttpResponse {
+    HttpResponse::Ok().body("Hello, World!")
+}

@@ -11,3 +11,6 @@ dotenvy = "0.15"
 actix-web = "4.9.0"
 log = "0.4.22"
 env_logger = "0.10"
+
+[profile.release]
+opt-level = 3  # Maximum optimization
