@@ -7,10 +7,14 @@ mod services;
 
 use actix_web::{App, HttpServer};
 use dotenvy::dotenv;
+use env_logger::Env;
+use log::{error, info};
 use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
     dotenv().ok();
     config::init();
 
@@ -19,12 +23,20 @@ async fn main() -> std::io::Result<()> {
         .parse()
         .expect("PORT must be a valid number");
 
-    let db_pool = db::init_pool()
-        .await
-        .expect("Database connection failed. Check DATABASE_URL in .env");
+    info!("🚀 Starting server on port {}", port);
 
-    HttpServer::new(move || App::new().app_data(db_pool.clone()).configure(routes::init))
-        .bind(("127.0.0.1", port))?
-        .run()
-        .await
+    let db_pool = db::init_pool().await;
+    match db_pool {
+        Ok(pool) => {
+            info!("✅ Database connected successfully!");
+            HttpServer::new(move || App::new().app_data(pool.clone()).configure(routes::init))
+                .bind(("127.0.0.1", port))?
+                .run()
+                .await
+        }
+        Err(err) => {
+            error!("❌ Failed to connect to the database: {}", err);
+            std::process::exit(1);
+        }
+    }
 }
