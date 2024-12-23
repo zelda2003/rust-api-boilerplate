@@ -1,7 +1,8 @@
-use crate::models::CreateUserRequest;
+use crate::{models::CreateUserRequest, services::find_user_by_id};
 use crate::services;
 use actix_web::{web, HttpResponse, Responder};
 use log::{error, info};
+use uuid::Uuid;
 
 pub async fn create_user(
     db_pool: web::Data<sqlx::PgPool>,
@@ -37,7 +38,30 @@ pub async fn get_users(db_pool: web::Data<sqlx::PgPool>) -> impl Responder {
         }
     }
 }
-
+pub async fn find_user(
+    params: web::Path<String>,
+    db_pool: web::Data<sqlx::PgPool>,
+) -> impl Responder {
+    let user_id = params.parse::<Uuid>().map_err(|e| {
+        error!("Invalid user ID format: {}", e);
+        HttpResponse::BadRequest().body("Invalid user ID")
+    });
+    
+    match find_user_by_id(db_pool.get_ref(), user_id.expect("REASON")).await {
+        Ok(user) => {
+            info!("✅ User found successfully: {:?}", user);
+            HttpResponse::Ok().json(user)
+        }
+        Err(services::ServiceError::DatabaseError(msg)) => {
+            error!("❌ Database error while finding user: {}", msg);
+            HttpResponse::InternalServerError().body(msg)
+        }
+        Err(services::ServiceError::ValidationError(msg)) => {
+            error!("⚠️ Validation error while finding user: {}", msg);
+            HttpResponse::BadRequest().body(msg)
+        }
+    }
+}
 pub async fn hello_world() -> HttpResponse {
     HttpResponse::Ok().body("Hello, World!")
 }

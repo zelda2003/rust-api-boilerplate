@@ -76,3 +76,25 @@ pub async fn get_all_users(db_pool: &PgPool) -> Result<Vec<User>, ServiceError> 
         }
     }
 }
+pub async fn find_user_by_id(db_pool: &PgPool, user_id: Uuid) -> Result<User, ServiceError> {
+    info!("📥 Fetching user with ID: {}", user_id);
+
+    // Execute database query
+    match sqlx::query_as!(
+        User,
+        "SELECT id, name, email FROM users WHERE id = $1",
+        user_id
+    )
+    .fetch_one(db_pool)
+    .await
+    {
+        Ok(user) => {
+            info!("✅ Successfully fetched user: {:?}", user);
+            Ok(user)
+        }
+        Err(err) => {
+            error!("❌ Database error while fetching user: {}", err);
+            Err(ServiceError::from(err))
+        }
+    }
+}
